@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Web Scraping para Alertas</title>
+  <title>Web Scraping Alertas INVIMA</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -22,15 +22,22 @@
     th {
       background-color: #f4f4f4;
     }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .loading {
+      font-size: 18px;
+      color: #555;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
-  <h1>Web Scraping para Alertas de Medicamentos</h1>
-  <p>Ingresa la URL de la página de alertas para obtener la información.</p>
-  <form id="scrapingForm">
-    <input type="text" id="urlInput" placeholder="Ingrese la URL" size="50" required>
-    <button type="submit">Obtener Datos</button>
-  </form>
+  <h1>Web Scraping Alertas INVIMA</h1>
+  <button id="fetchData">Obtener Alertas</button>
+  <div class="loading" id="loading" style="display: none;">Cargando datos, por favor espera...</div>
   <table id="dataTable">
     <thead>
       <tr>
@@ -46,70 +53,60 @@
     </tbody>
   </table>
   <script>
-    document.getElementById('scrapingForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const url = document.getElementById('urlInput').value;
-      const listado = [
-        'ADRENALINA', 'AGUA ESTÉRIL', 'ALCOHOL AL 70%', 'ATROPINA SULFATO', 'BETAMETASONA',
-        'BICARBONATO DE SODIO', 'CLONIDINA', 'DEXAMETASONA', 'DEXTROSA 5%', 'DEXTROSA 10%',
-        'ETOXIVEN 1%', 'FUROSEMIDA', 'GLUCONATO DE CLORHEXIDINA (GEL ANTIBACTERIAL)',
-        'GLUCONATO DE CLORHEXIDINA 4% (JABÓN)', 'LEVONORGESTREL (MIRENA)', 'LOSARTÁN',
-        'YODO POLIETOXI POLIPROPOXI', 'SALBUTAMOL', 'SODIO CLORURO 0.45%', 'SODIO CLORURO 0.9%',
-        'LIDOCAÍNA 2 % CON EPINEFRINA', 'DENOSUMAB', 'TOXINA BOTULINICA TIPO A (BOTOX)',
-        'DICLOFENACO SÓDICO', 'TOXINA BOTULINICA TIPO A (DYSPORT)', 'LIDOCAÍNA 2 %',
-        'ÁCIDO ZOLEDRONICO', 'ACIDO FUSIDICO CREMA TOPICA 2% TUBO 15g', 'Lidocaína Unguento 5%',
-        'AGUA OXIGENADA', 'ETOXIVEN 3%  (POLIDICANOL)', 'KENACORT A', 'LEVONORGESTREL (KYLEENA)',
-        'ETONOGESTREL', 'LEVONOGESTREL (SINOIMPLANT)', 'LEVONOGESTREL (JAYDESS)', 'BOTOX'
-      ];
+    const listado = [
+      'ADRENALINA', 'AGUA ESTÉRIL', 'ALCOHOL AL 70%', 'ATROPINA SULFATO', 'BETAMETASONA',
+      'BICARBONATO DE SODIO', 'CLONIDINA', 'DEXAMETASONA', 'DEXTROSA 5%', 'DEXTROSA 10%',
+      'ETOXIVEN 1%', 'FUROSEMIDA', 'GLUCONATO DE CLORHEXIDINA (GEL ANTIBACTERIAL)',
+      'GLUCONATO DE CLORHEXIDINA 4% (JABÓN)', 'LEVONORGESTREL (MIRENA)', 'LOSARTÁN',
+      'YODO POLIETOXI POLIPROPOXI', 'SALBUTAMOL', 'SODIO CLORURO 0.45%', 'SODIO CLORURO 0.9%',
+      'LIDOCAÍNA 2 % CON EPINEFRINA', 'DENOSUMAB', 'TOXINA BOTULINICA TIPO A (BOTOX)',
+      'DICLOFENACO SÓDICO', 'TOXINA BOTULINICA TIPO A (DYSPORT)', 'LIDOCAÍNA 2 %',
+      'ÁCIDO ZOLEDRONICO', 'ACIDO FUSIDICO CREMA TOPICA 2% TUBO 15g', 'Lidocaína Unguento 5%',
+      'AGUA OXIGENADA', 'ETOXIVEN 3%  (POLIDICANOL)', 'KENACORT A', 'LEVONORGESTREL (KYLEENA)',
+      'ETONOGESTREL', 'LEVONOGESTREL (SINOIMPLANT)', 'LEVONOGESTREL (JAYDESS)', 'BOTOX'
+    ];
+
+    document.getElementById('fetchData').addEventListener('click', async () => {
+      const baseUrl = 'https://app.invima.gov.co/alertas/medicamentos-productos-biologicos';
+      const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+      const totalPages = 5;
+      const tableBody = document.getElementById('dataTable').querySelector('tbody');
+      const loading = document.getElementById('loading');
+
+      tableBody.innerHTML = '';
+      loading.style.display = 'block';
 
       try {
-        const response = await fetch(url);
-        if (!response.ok) {
-          alert('Error al acceder a la URL: ' + response.status);
-          return;
-        }
-        const html = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
+        for (let page = 0; page < totalPages; page++) {
+          const response = await fetch(`${proxyUrl}${baseUrl}?page=${page}`);
+          const html = await response.text();
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
 
-        const data = [];
-        const rows = doc.querySelectorAll('.views-row');
-        rows.forEach(row => {
-          const titulo = row.querySelector('.views-field-title').innerText.trim();
-          const fecha = row.querySelector('.views-field-field-a-o').innerText.trim();
+          const rows = doc.querySelectorAll('.views-row');
+          rows.forEach(row => {
+            const titulo = row.querySelector('.views-field-title')?.textContent.trim();
+            const fecha = row.querySelector('.views-field-field-a-o')?.textContent.trim();
 
-          const aplica = listado.some(item => titulo.toLowerCase().includes(item.toLowerCase())) ? 'Aplica' : 'No aplica';
-          const observaciones = aplica === 'Aplica' ? 'Se ejecuta acción institucional' : 'No se ejecuta acción institucional';
+            const aplica = listado.some(item => titulo?.toLowerCase().includes(item.toLowerCase())) ? 'Aplica' : 'No aplica';
+            const observaciones = aplica === 'Aplica' ? 'Se ejecuta acción institucional' : 'No se ejecuta acción institucional';
 
-          data.push({
-            fecha,
-            farmacovigilancia: 'X',
-            iniciales: '.',
-            titulo,
-            descripcion: aplica,
-            observaciones
+            const tableRow = document.createElement('tr');
+            tableRow.innerHTML = `
+              <td>${fecha}</td>
+              <td>X</td>
+              <td>.</td>
+              <td>${titulo}</td>
+              <td>${aplica}</td>
+              <td>${observaciones}</td>
+            `;
+            tableBody.appendChild(tableRow);
           });
-        });
-
-        const tableBody = document.getElementById('dataTable').querySelector('tbody');
-        tableBody.innerHTML = '';
-        data.forEach(item => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${item.fecha}</td>
-            <td>${item.farmacovigilancia}</td>
-            <td>${item.iniciales}</td>
-            <td>${item.titulo}</td>
-            <td>${item.descripcion}</td>
-            <td>${item.observaciones}</td>
-          `;
-          tableBody.appendChild(row);
-        });
-
-        alert('Datos procesados correctamente.');
-
+        }
       } catch (error) {
-        alert('Error en el proceso de scraping: ' + error.message);
+        alert('Error al obtener los datos: ' + error.message);
+      } finally {
+        loading.style.display = 'none';
       }
     });
   </script>
